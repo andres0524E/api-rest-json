@@ -6,20 +6,22 @@ export class ui {
 
   togglelang() {
     this.lang = this.lang === "es" ? "en" : "es";
+    document.getElementById("langLabel").textContent = this.lang.toUpperCase();
   }
 
   showloader() {
-    document.getElementById("loader").style.display = "block";
+    const loader = document.getElementById("loader");
+    loader.classList.add("active");
   }
 
   hideloader() {
-    document.getElementById("loader").style.display = "none";
+    const loader = document.getElementById("loader");
+    loader.classList.remove("active");
   }
 
   loadselect(animes) {
     const select = document.getElementById("animeSelect");
     select.innerHTML = "";
-
     animes.forEach(anime => {
       const option = document.createElement("option");
       option.value = anime.mal_id;
@@ -30,7 +32,6 @@ export class ui {
 
   async traducir(texto) {
     if (this.lang === "en") return texto;
-
     try {
       const res = await fetch(
         `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=es&dt=t&q=${encodeURIComponent(texto)}`
@@ -44,49 +45,37 @@ export class ui {
 
   traducirgeneros(genres) {
     const mapa = {
-      "Action": "Acción",
-      "Adventure": "Aventura",
-      "Comedy": "Comedia",
-      "Drama": "Drama",
-      "Fantasy": "Fantasía",
-      "Horror": "Horror",
-      "Romance": "Romance",
-      "Sci-Fi": "Ciencia ficción",
-      "Slice of Life": "Vida cotidiana"
+      "Action": "Acción", "Adventure": "Aventura", "Comedy": "Comedia",
+      "Drama": "Drama", "Fantasy": "Fantasía", "Horror": "Horror",
+      "Romance": "Romance", "Sci-Fi": "Ciencia Ficción", "Slice of Life": "Vida Cotidiana",
+      "Mystery": "Misterio", "Supernatural": "Sobrenatural", "Thriller": "Thriller",
+      "Sports": "Deportes", "Music": "Música", "Historical": "Histórico"
     };
-
-    if (this.lang === "en") return genres.map(g => g.name).join(", ");
-
-    return genres.map(g => mapa[g.name] || g.name).join(", ");
+    if (this.lang === "en") return genres.map(g => g.name);
+    return genres.map(g => mapa[g.name] || g.name);
   }
 
   traducirorigen(source) {
     const mapa = {
-      "manga": "Manga 📖",
-      "light novel": "Novela ligera 📚",
-      "novel": "Novela 📘",
-      "original": "Original 🎬",
-      "game": "Videojuego 🎮"
+      "manga": "Manga 📖", "light novel": "Novela ligera 📚",
+      "novel": "Novela 📘", "original": "Original 🎬", "game": "Videojuego 🎮"
     };
-
     if (this.lang === "en") return source;
-
     return mapa[source] || source;
   }
 
   rendergrid(animes) {
     const grid = document.getElementById("animeGrid");
-
-    grid.innerHTML = animes.map(anime => {
+    grid.innerHTML = animes.map((anime, i) => {
       const img =
         anime.images.webp?.large_image_url ||
         anime.images.jpg?.large_image_url;
-
       return `
-        <div class="anime-card" data-id="${anime.mal_id}">
-          <img src="${img}">
-          <div class="overlay">
-            <h6>🎬 ${anime.title}</h6>
+        <div class="anime-card" data-id="${anime.mal_id}" style="animation-delay:${i * 0.04}s">
+          <img src="${img}" alt="${anime.title}" loading="lazy">
+          <div class="card-overlay">
+            <div class="card-title">${anime.title}</div>
+            ${anime.score ? `<div class="card-score">★ ${anime.score}</div>` : ''}
           </div>
         </div>
       `;
@@ -106,32 +95,52 @@ export class ui {
       data.images.jpg?.large_image_url;
 
     this.setbackground(imagenAlta);
-
     this.showloader();
 
-    const sinopsis = await this.traducir(data.synopsis || "");
+    const sinopsis = await this.traducir(data.synopsis || "Sin sinopsis disponible.");
     const generos = this.traducirgeneros(data.genres);
     const origen = this.traducirorigen(data.source);
 
     this.hideloader();
 
+    const scoreLabel = this.lang === "es" ? "Puntuación" : "Score";
+    const rankLabel = this.lang === "es" ? "Ranking" : "Rank";
+    const epsLabel = this.lang === "es" ? "Episodios" : "Episodes";
+    const sourceLabel = this.lang === "es" ? "Basado en" : "Source";
+    const synopsisLabel = this.lang === "es" ? "Sinopsis" : "Synopsis";
+
+    const generosTags = generos.map(g => `<span class="genre-tag">${g}</span>`).join("");
+
     result.innerHTML = `
-      <div class="detail-card fade-in">
+      <div class="detail-card">
+        <div class="detail-poster">
+          <img src="${imagenAlta}" class="detail-img" alt="${data.title}">
+          ${data.score ? `<div class="score-badge">★ ${data.score}</div>` : ''}
+        </div>
+        <div class="detail-info">
+          <div class="detail-title">
+            <span>${data.title_japanese || ''}</span>
+            ${data.title}
+          </div>
 
-        <h2>🎬 ${data.title}</h2>
+          <div class="detail-stats">
+            ${data.rank ? `<div class="stat-chip"><span class="chip-label">${rankLabel}</span> #${data.rank}</div>` : ''}
+            ${data.episodes ? `<div class="stat-chip"><span class="chip-label">${epsLabel}</span> ${data.episodes}</div>` : ''}
+            ${data.status ? `<div class="stat-chip">${data.status}</div>` : ''}
+            ${data.year ? `<div class="stat-chip">${data.year}</div>` : ''}
+          </div>
 
-        <img src="${imagenAlta}" class="detail-img">
+          ${data.genres.length ? `<div class="genres">${generosTags}</div>` : ''}
 
-        <p>⭐ <strong>${this.lang === "es" ? "Calificación" : "Score"}:</strong> ${data.score || "N/A"}</p>
-        <p>🏆 <strong>${this.lang === "es" ? "Ranking" : "Rank"}:</strong> ${data.rank || "N/A"}</p>
-        <p>📺 <strong>${this.lang === "es" ? "Episodios" : "Episodes"}:</strong> ${data.episodes || "N/A"}</p>
-        <p>🎭 <strong>${this.lang === "es" ? "Géneros" : "Genres"}:</strong> ${generos}</p>
-        <p>📚 <strong>${this.lang === "es" ? "Basado en" : "Source"}:</strong> ${origen}</p>
+          ${data.source ? `<div class="stat-chip" style="align-self:start"><span class="chip-label">${sourceLabel}</span> ${origen}</div>` : ''}
 
-        <hr>
+          <div class="detail-divider"></div>
 
-        <p>📖 <strong>${this.lang === "es" ? "Sinopsis" : "Synopsis"}:</strong><br>${sinopsis}</p>
-
+          <div>
+            <div class="synopsis-label">📖 ${synopsisLabel}</div>
+            <p class="synopsis-text">${sinopsis}</p>
+          </div>
+        </div>
       </div>
     `;
   }
